@@ -1,554 +1,95 @@
 /**
  * @name HideSideBars
  * @author Mobiaz
- * @version 1.53
+ * @version 1.1.3
  * @description Hides side bars in discord
  * @website https://github.com/ethanhu99
  */
 
-module.exports = (() => {
-	/* global BdApi */
-	const config = {
-		"info": {
-			"currentVersionInfo": {
-				"version": "1.53",
-				"hasShownChangelog": true
-			},
-			"settings": {
-				"keybinds": false,
-				"animations": false
-			}
-		},
-		"changeLog": {
-			"": {"": ""
-			}
-		}	
-	};
-	
-	const log = function () {
-		const parts = [
-			`%c[${config.info.name}]%c \u2014 %s`,
-			'color: #3A71C1; font-weight: 700;',
-			'',
-			new Date().toUTCString()
-		];
-		console.group.apply(null, parts);
-		console.log.apply(null, arguments);
-		console.groupEnd();
-	};
+ module.exports = (_ => {
 
-	const error = function () {
-		const parts = [
-			`%c[${config.info.name}]%c \u2014 %s`,
-			'color: #3A71C1; font-weight: 700;',
-			'',
-			new Date().toUTCString()
-		];
-		console.group.apply(null, parts);
-		console.error.apply(null, arguments);
-		console.groupEnd();
-	};
+  function createSelector(className) {
+      return '.' + className.replace(/ /g, '.')
+  }
 
-	/* Build */
-	const buildPlugin = ([Plugin, Api]) => {
-		const { Toasts, Logger, Patcher, DOMTools, Settings, ReactTools, DiscordModules, WebpackModules, DiscordSelectors, PluginUtilities } = Api;
-		const { SettingPanel, SettingGroup, Switch } = Settings;
+  const sidebarSelector = createSelector(BdApi.findModuleByProps("hasNotice").sidebar)
+  const guildBarSelector = createSelector(BdApi.findModuleByProps("hasNotice").guilds)
+  const sidebarBtn = document.createElement('span');
+  const btnStyle = `
+          .hide-sidebar-btn {
+              color: var(--interactive-normal);
+              background-color: var(--background-primary);
+              transition: background-color .15s ease-out,color .15s ease-out, border-radius .15s ease-out;
+              display: flex; 
+              justify-content: center;
+              margin: 6px 10px;
+              padding: 5px 3px;
+              border-radius: 15px;
+              font-weight: 500;
+          }
+          .hide-sidebar-btn:hover{
+              border-radius: 7px;
+              cursor: pointer;
+              color: #fff;
+              background-color: var(--brand-experiment);
+          }`;
 
-		const has = Object.prototype.hasOwnProperty;
-		const Header = WebpackModules.getByDisplayName('HeaderBarContainer');
-		const TooltipWrapper = WebpackModules.getByPrototypes('renderTooltip');
-		const icons = WebpackModules.getByProps('iconWrapper', 'clickable');
-		const guilds = WebpackModules.getByProps('wrapper', 'unreadMentionsIndicatorTop');
-		const channelBase = WebpackModules.getByProps('base', 'container', 'sidebar');
+  return class {
 
-		const buttonStates = {
-			channels: {
-				active: true
-			},
-			guilds: {
-				active: true
-			}
-		};
+      start() {
+          BdApi.injectCSS('HideSidebarStyles', btnStyle)
+          this.initialise()
+      }
+      stop() {
+          BdApi.clearCSS('HideSidebarStyles')
+          this.cleanup()
+      }
 
-		const ServerButton = class ServerButton extends DiscordModules.React.Component {
-			constructor(props) {
-				super(props);
-				this.onClick = this.onClick.bind(this);
-			}
+      cleanup() {
+          sidebarBtn.remove()
+      }
 
-			onClick(e) {
-				if (this.props.onClick) this.props.onClick(e);
-			}
+      createButton() {
+          const sidebar = document.querySelector(sidebarSelector)
 
-			render() {
-				const active = buttonStates.guilds.active
-					? icons.selected
-					: '';
-				return DiscordModules.React.createElement(TooltipWrapper, {
-					color: TooltipWrapper.Colors.PRIMARY,
-					position: TooltipWrapper.Positions.BOTTOM,
-					text: 'Toggle Servers',
-					children: (props) => DiscordModules.React.createElement('div', Object.assign({
-						tabindex: 0,
-						className: `${icons.iconWrapper} ${icons.clickable} ${active}`.trim(),
-						role: 'button'
-					}, props), 
-						DiscordModules.React.createElement('svg', {
-							name: 'ServerButton',
-							className: icons.icon,
-							onClick: this.onClick,
-							width: 24,
-							height: 24,
-							viewBox: '-2 -2 28 28',
-							fill: 'none'
-						},
-							DiscordModules.React.createElement('path', {
-								d: 'M0 0h24v24H0z',
-								fill: 'none'
-							}),
-							DiscordModules.React.createElement('path', {
-								d: 'M20 13H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1v-6c0-.55-.45-1-1-1zM7 19c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM20 3H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zM7 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z',
-								fill: 'currentColor',
-								fillRule: 'evenodd',
-								clipRule: 'evenodd'
-							})
-						)
-					)
-				});
-			}
-		};
+          sidebarBtn.innerHTML = '<<<'
+          sidebarBtn.classList.add('hide-sidebar-btn')
+          sidebarBtn.addEventListener('click', function () {
+              if (sidebar.style.display === "" || sidebar.style.display === "flex") {
+                  sidebar.style.display = "none"
+                  sidebarBtn.innerHTML = '>>>'
+              }
+              else {
+                  sidebar.style.display = "flex"
+                  sidebarBtn.innerHTML = '<<<'
+              }
+          })
+          return sidebarBtn
+      }
 
-		const ChannelButton = class ChannelButton extends DiscordModules.React.Component {
-			constructor(props) {
-				super(props);
-				this.onClick = this.onClick.bind(this);
-			}
+      observer(mutationRecord) {
+          const serverList = document.querySelector(guildBarSelector).firstChild.childNodes[1]
+          const serverListSelector = createSelector(serverList.classList.value)
+          if (mutationRecord.type !== 'childList') return;
+          if (!mutationRecord.addedNodes.length) return;
+          for (const node of Array.from(mutationRecord.addedNodes)) {
+              if (node.matches && node.matches(serverListSelector)) {
+                  this.initialise(node);
+                  return;
+              } else if (node.querySelector) {
+                  const child = node.querySelector(serverListSelector);
+                  if (child) {
+                      this.initialise(child);
+                      return;
+                  }
+              }
+          }
+      }
 
-			onClick(e) {
-				if (this.props.onClick) this.props.onClick(e);
-			}
-
-			render() {
-				const active = buttonStates.channels.active
-					? icons.selected
-					: '';
-				return DiscordModules.React.createElement(TooltipWrapper, {
-					color: TooltipWrapper.Colors.PRIMARY,
-					position: TooltipWrapper.Positions.BOTTOM,
-					text: 'Toggle Channels',
-					children: (props) => DiscordModules.React.createElement('div', Object.assign({
-						tabindex: 0,
-						className: `${icons.iconWrapper} ${icons.clickable} ${active}`.trim(),
-						role: 'button'
-					}, props),
-						DiscordModules.React.createElement('svg', {
-							name: 'ChannelButton',
-							className: icons.icon,
-							onClick: this.onClick,
-							width: 24,
-							height: 24,
-							viewBox: '2 2 20 20',
-							fill: 'none'
-						},
-							DiscordModules.React.createElement('path', {
-								d: 'M5 13h14v-2H5v2zm-2 4h14v-2H3v2zM7 7v2h14V7H7z',
-								fill: 'currentColor',
-								fillRule: 'evenodd',
-								clipRule: 'evenodd'
-							}),
-							DiscordModules.React.createElement('path', {
-								d: 'M0 0h24v24H0z',
-								fill: 'none'
-							})
-						)
-					)
-				});
-			}
-		};
-		
-		return class HideSideBars extends Plugin {
-			constructor() {
-				super();
-				this.promises = {
-					state: { cancelled: false },
-					cancel() { this.state.cancelled = true; },
-					restore() { this.state.cancelled = false; }
-				};
-				this.default = { keybinds: false, animations: true };
-				this.settings = null;
-				this._css;
-				this.keyFns = {
-					c: () => this.onChannelButtonClick(),
-					g: () => this.onServerButtonClick()
-				};
-				this.animationCSS = `
-					@keyframes close {
-						to {
-							width: 0;
-						}
-					}
-					@keyframes close-guild {
-						to {
-							left: 0;
-						}
-					}
-					@keyframes open {
-						from {
-							width: 0;
-						}
-					}
-					@keyframes open-guild {
-						from {
-							left: 0;
-						}
-					}
-				`;
-				this.css = `
-					.bd-minimal ._closed,
-					._closed {
-						visibility: hidden;
-						width: 0;
-						pointer-events: none;
-					}
-					.closing-guild {
-						animation: close-guild 400ms linear;
-					}
-					.closing {
-						animation: close 400ms linear;
-					}
-					.opening-guild {
-						animation: open-guild 400ms linear;
-					}
-					.opening {
-						animation: open 400ms linear;
-					}
-				`;
-			}
-
-			/* Methods */
-			onStart() {
-				this.promises.restore();
-				this.settings = this.loadSettings(this.default);
-				this.handleCSS();
-				this.patchHeader(this.promises.state);
-				this.handleKeybinds();
-				Toasts.info(`${this.name} ${this.version} has started!`, { timeout: 2e3 });
-			}
-
-			onStop() {
-				this.promises.cancel();
-				Patcher.unpatchAll();
-				this.updateHeader();
-				this.removeKeybinds();
-				PluginUtilities.removeStyle(this.short);
-				Toasts.info(`${this.name} ${this.version} has stopped!`, { timeout: 2e3 });
-			}
-
-			handleCSS() {
-				const css = this.settings.animations
-					? [this.css.trim(), this.animationCSS.trim()].join('\n')
-					: this.css;
-				const sheet = document.getElementById(this.short);
-				if (sheet) sheet.remove();
-				PluginUtilities.addStyle(this.short, css);
-			}
-
-			removeKeybinds() {
-				DOMTools.off(document, `keyup.${this.short}`);
-			}
-
-			handleKeybinds() {
-				this.removeKeybinds();
-				if (this.settings.keybinds) DOMTools.on(document, `keyup.${this.short}`, (e) => this.onKeyup(e));
-			}
-
-			onKeyup({ altKey, ctrlKey, key }) {
-				key = key.toLowerCase();
-				
-				if (!altKey || ctrlKey || !has.call(this.keyFns, key)) return;
-
-				this.keyFns[key]();
-			}
-
-			isNotClosed(el) {
-				return !DOMTools.hasClass(el, '_closed');
-			}
-
-			closeElement(el, guilds, base) {
-				if (!this.settings.animations && guilds && base) {
-					// base.style.setProperty('left', '0');
-					return DOMTools.addClass(el, '_closed');
-				} else if (guilds && base) {
-					DOMTools.addClass(base, 'closing-guild');
-					return setTimeout(() => {
-						DOMTools.addClass(el, '_closed');
-						// base.style.setProperty('left', '0');
-						DOMTools.removeClass(base, 'closing-guild');
-					}, 400);
-				} else if (this.settings.animations && !guilds && !base) {
-					DOMTools.addClass(el, 'closing');
-					return setTimeout(() => {
-						DOMTools.addClass(el, '_closed');
-						DOMTools.removeClass(el, 'closing');
-					}, 400);
-				}
-				DOMTools.addClass(el, '_closed');
-			}
-
-			openElement(el, guilds, base) {
-				// if (guilds && base) base.style.setProperty('left', '0');
-				if (!this.settings.animations && guilds && base) {
-					// base.style.setProperty('left', '0');
-					return DOMTools.removeClass(el, '_closed');
-				} else if (guilds && base) {
-					DOMTools.addClass(base, 'opening-guild');
-					el.style.setProperty('width', '0');
-					return setTimeout(() => {
-						el.style.setProperty('width', '');
-						DOMTools.removeClass(base, 'opening-guild');
-						DOMTools.removeClass(el, '_closed');
-					}, 400);
-				}
-				el.style.width = '0';
-				DOMTools.replaceClass(el, '_closed', 'opening');
-				el.style.width = '';
-				setTimeout(() => DOMTools.removeClass(el, 'opening'), 400);
-			}
-
-			onServerButtonClick() {
-				const [iconClass] = icons.icon.split(' ');
-				const [guildsWrapper] = guilds.wrapper.split(' ');
-				const button = document.querySelector(`.${iconClass}[name="ServerButton"]`);
-				const element = document.querySelector(`.${guildsWrapper}`);
-				const channelsBase = document.querySelector(`.${channelBase.base.split(' ')[0]}`);
-				
-				if (!button) return;
-
-				buttonStates.guilds.active = !buttonStates.guilds.active;
-
-				DOMTools.toggleClass(button.parentElement, icons.selected);
-
-				if (this.isNotClosed(element)) return this.closeElement(element, true, channelsBase);
-
-				this.openElement(element, true, channelsBase);
-			}
-			
-			onChannelButtonClick() {
-				const [iconClass] = icons.icon.split(' ');
-				const button = document.querySelector(`.${iconClass}[name="ChannelButton"]`);
-				const element = document.querySelector(`.${channelBase.sidebar.split(' ')[0]}`);
-				
-				if (!button) return;
-
-				buttonStates.channels.active = !buttonStates.channels.active;
-
-				DOMTools.toggleClass(button.parentElement, icons.selected);
-
-				if (this.isNotClosed(element)) return this.closeElement(element);
-
-				this.openElement(element);
-			}
-
-			patchHeader(state) {
-				if (state.cancelled || !Header) return;
-
-				Patcher.after(Header.prototype, 'render', (that, args, value) => {
-					const children = this.getProps(value, 'props.toolbar.props.children.0');
-					if (!children || !Array.isArray(children)) return value;
-
-					const S = DiscordModules.React.createElement(ServerButton, { key: 'servers', onClick: (e) => this.onServerButtonClick(e) });
-					const C = DiscordModules.React.createElement(ChannelButton, { key: 'channels', onClick: (e) => this.onChannelButtonClick(e) });
-					const fn = (key) => (item) => item && item.key && item.key === key;
-
-					if (!children.some(fn('servers')) && !children.some(fn('channels'))) children.splice(3, 0, S, C);
-
-					return value;
-				});
-
-				this.updateHeader();
-			}
-
-			updateHeader() {
-				const head = document.querySelector(DiscordSelectors.TitleWrap.title.value.trim());
-				if (head) ReactTools.getOwnerInstance(head).forceUpdate();
-			}
-
-			/**
-			 * Function to access properties of an object safely, returns false instead of erroring if the property / properties do not exist.
-			 * @name safelyGetNestedProps
-			 * @author Zerebos
-			 * @param {Object} obj The object we are accessing.
-			 * @param {String} path The properties we want to traverse or access.
-			 * @returns {*}
-			 */
-			getProps(obj, path) {
-				return path.split(/\s?\.\s?/).reduce((object, prop) => object && object[prop], obj);
-			}
-
-			/* Settings Panel */
-			getSettingsPanel() {
-				return SettingPanel.build(() => this.saveSettings(this.settings),
-					new SettingGroup('Plugin Settings', { shown: true }).append(
-						new Switch('Enable Keybinds', 'Guilds: Alt + G. Channels: Alt + C.', this.settings.keybinds, (i) => {
-							this.settings.keybinds = i;
-							this.handleKeybinds();
-						}),
-						new Switch('Use Animations', 'Whether or not to use the opening/closing animations.', this.settings.animations, (i) => {
-							this.settings.animations = i;
-							this.handleCSS();
-						})
-					)
-				);
-			}
-
-			/* Setters */
-			set css(style = '') {
-				return this._css = style.split(/\s+/g).join(' ').trim();
-			}
-
-			/* Getters */
-			get [Symbol.toStringTag]() {
-				return 'Plugin';
-			}
-
-			get css() {
-				return this._css;
-			}
-
-			get name() {
-				return config.info.name;
-			}
-
-			get short() {
-				let string = '';
-
-				for (let i = 0, len = config.info.name.length; i < len; i++) {
-					const char = config.info.name[i];
-					if (char === char.toUpperCase()) string += char;
-				}
-
-				return string;
-			}
-
-			get author() {
-				return config.info.authors.map((author) => author.name).join(', ');
-			}
-
-			get version() {
-				return config.info.version;
-			}
-
-			get description() {
-				return config.info.description;
-			}
-		};
-	};
-
-	/* Finalize */
-	return !global.ZeresPluginLibrary 
-		? class {
-			constructor() {
-				this._config = config;
-			}
-
-			/* Required */
-
-			getName() {
-				return config.info.name.replace(/\s+/g, '');
-			}
-
-			getAuthor() {
-				return config.info.authors.map((author) => author.name).join(', ');
-			}
-
-			getVersion() {
-				return config.info.version;
-			}
-
-			getDescription() {
-				return config.info.description;
-			}
-
-			stop() {
-				log('Stopped!');
-			}
-
-			load() {
-				const { BdApi, BdApi: { React } } = window;
-				const title = 'Library Missing';
-				const TextElement = BdApi.findModuleByDisplayName('Text');
-				const children = [];
-				if (!TextElement) {
-					children.push(
-						React.createElement('span', {
-							children: [`The library plugin needed for ${config.info.name} is missing.`]
-						}),
-						React.createElement('br', {}),
-						React.createElement('a', {
-							target: '_blank',
-							href: 'https://betterdiscord.app/Download?id=9',
-							children: ['Click here to download the library!']
-						})
-					);
-					return BdApi.alert(title, React.createElement('span', { children }));
-				}
-				children.push(
-					React.createElement(TextElement, {
-						color: TextElement.Colors.STANDARD,
-						children: [`The library plugin needed for ${config.info.name} is missing.`]
-					}),
-					React.createElement('br', {}),
-					React.createElement('a', {
-						target: '_blank',
-						href: 'https://betterdiscord.app/Download?id=9',
-						children: ['Click here to download the library!']
-					})
-				);
-				try {
-					BdApi.showConfirmationModal(title, [
-						React.createElement(TextElement, {
-							color: TextElement.Colors.STANDARD,
-							children: [`The library plugin needed for ${config.info.name} is missing. Please click Download Now to install it.`]
-						})
-					], {
-						danger: false,
-						confirmText: 'Download Now',
-						cancelText: 'Cancel',
-						onConfirm: () => {
-							require('request').get('https://rauenzi.github.io/BDPluginLibrary/release/0PluginLibrary.plugin.js', async (error, response, body) => {
-								if (error) return require('electron').shell.openExternal('https://betterdiscord.app/Download?id=9');
-								await new Promise((r) => require('fs').writeFile(require('path').join(window.ContentManager.pluginsFolder, '0PluginLibrary.plugin.js'), body, r));
-							});
-						}
-					});
-				} catch (e) {
-					error(e);
-					BdApi.alert(title, children);
-				}
-			}
-
-			start() {
-				log('Started!');
-			}
-
-			/* Getters */
-			get [Symbol.toStringTag]() {
-				return 'Plugin';
-			}
-
-			get short() {
-				let string = '';
-
-				for (let i = 0, len = config.info.name.length; i < len; i++) {
-					const char = config.info.name[i];
-					if (char === char.toUpperCase()) string += char;
-				}
-
-				return string;
-			}
-		}
-		: buildPlugin(global.ZeresPluginLibrary.buildPlugin(config));
+      initialise(serverListNode) {
+          this.createButton()
+          let serverList = serverListNode || document.querySelector(guildBarSelector).firstChild.childNodes[1]
+          serverList.insertBefore(sidebarBtn, serverList.firstElementChild.nextSibling);
+      }
+  }
 })();
-
-module.exports = HideSideBars;
-
