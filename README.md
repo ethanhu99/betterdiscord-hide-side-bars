@@ -2,7 +2,7 @@
 
 Adds a button that hides the left side bar in Discord.
 
-## Usage
+## Installation and Usage
 
 1. Download BetterDiscord [https://betterdiscord.app/](https://betterdiscord.app/)
 
